@@ -18,3 +18,7 @@ When you click the **Knit** button a document will be generated that includes bo
 ```{r, test-plot}
 plot(cars, col = "red")
 ```
+
+```{r cars}
+summary(cars)
+```
