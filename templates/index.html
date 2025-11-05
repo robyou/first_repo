@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Football Player Detection</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 1.1em;
+        }
+
+        .upload-section {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 30px;
+            background: #f8f9ff;
+            transition: all 0.3s ease;
+        }
+
+        .upload-section:hover {
+            border-color: #764ba2;
+            background: #f0f2ff;
+        }
+
+        .upload-section.drag-over {
+            background: #e8ebff;
+            border-color: #764ba2;
+            transform: scale(1.02);
+        }
+
+        .file-input-wrapper {
+            margin: 20px 0;
+        }
+
+        input[type="file"] {
+            display: none;
+        }
+
+        .upload-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 40px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .paste-hint {
+            margin-top: 20px;
+            color: #666;
+            font-style: italic;
+        }
+
+        .controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        label {
+            font-weight: 600;
+            color: #333;
+        }
+
+        input[type="range"] {
+            width: 200px;
+        }
+
+        .detect-btn {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            color: white;
+            padding: 12px 35px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(17, 153, 142, 0.4);
+        }
+
+        .detect-btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(17, 153, 142, 0.6);
+        }
+
+        .detect-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .results {
+            margin-top: 40px;
+            display: none;
+        }
+
+        .results.show {
+            display: block;
+        }
+
+        .stats {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .stats h3 {
+            font-size: 1.5em;
+            margin-bottom: 10px;
+        }
+
+        .stats .count {
+            font-size: 3em;
+            font-weight: bold;
+        }
+
+        .image-container {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .result-image {
+            max-width: 100%;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error {
+            background: #ff4444;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            display: none;
+        }
+
+        .error.show {
+            display: block;
+        }
+
+        .detections-list {
+            margin-top: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            background: #f8f9ff;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .detection-item {
+            background: white;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .confidence-bar {
+            width: 100px;
+            height: 20px;
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            transition: width 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚽ Football Player Detection</h1>
+        <p class="subtitle">Upload or paste a screenshot of a football match to detect players</p>
+
+        <div class="upload-section" id="dropZone">
+            <h3>📸 Upload or Paste Image</h3>
+            <div class="file-input-wrapper">
+                <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                    Choose File
+                </button>
+                <input type="file" id="fileInput" accept="image/*">
+            </div>
+            <p class="paste-hint">
+                💡 Tip: You can also paste an image directly (Ctrl+V / Cmd+V)
+            </p>
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <label for="confidenceSlider">Confidence Threshold:</label>
+                <input type="range" id="confidenceSlider" min="0.1" max="0.9" step="0.05" value="0.3">
+                <span id="confidenceValue">0.30</span>
+            </div>
+            <button class="detect-btn" id="detectBtn" disabled>Detect Players</button>
+        </div>
+
+        <div class="error" id="errorMsg"></div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Detecting players...</p>
+        </div>
+
+        <div class="results" id="results">
+            <div class="stats">
+                <h3>Players Detected</h3>
+                <div class="count" id="playerCount">0</div>
+            </div>
+
+            <div class="image-container">
+                <img id="resultImage" class="result-image" alt="Detection Result">
+            </div>
+
+            <div class="detections-list" id="detectionsList"></div>
+        </div>
+    </div>
+
+    <script>
+        let currentImage = null;
+
+        const fileInput = document.getElementById('fileInput');
+        const detectBtn = document.getElementById('detectBtn');
+        const confidenceSlider = document.getElementById('confidenceSlider');
+        const confidenceValue = document.getElementById('confidenceValue');
+        const dropZone = document.getElementById('dropZone');
+        const loading = document.getElementById('loading');
+        const results = document.getElementById('results');
+        const errorMsg = document.getElementById('errorMsg');
+
+        // Update confidence value display
+        confidenceSlider.addEventListener('input', (e) => {
+            confidenceValue.textContent = parseFloat(e.target.value).toFixed(2);
+        });
+
+        // File input change
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                currentImage = file;
+                detectBtn.disabled = false;
+                showMessage(`Image loaded: ${file.name}`);
+            }
+        });
+
+        // Drag and drop
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('drag-over');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('drag-over');
+
+            const file = e.dataTransfer.files[0];
+            if (file && file.type.startsWith('image/')) {
+                currentImage = file;
+                detectBtn.disabled = false;
+                showMessage(`Image loaded: ${file.name}`);
+            }
+        });
+
+        // Paste image from clipboard
+        document.addEventListener('paste', (e) => {
+            const items = e.clipboardData.items;
+            for (let item of items) {
+                if (item.type.startsWith('image/')) {
+                    const file = item.getAsFile();
+                    currentImage = file;
+                    detectBtn.disabled = false;
+                    showMessage('Image pasted from clipboard');
+                    break;
+                }
+            }
+        });
+
+        // Detect button click
+        detectBtn.addEventListener('click', async () => {
+            if (!currentImage) return;
+
+            const formData = new FormData();
+            const confidence = parseFloat(confidenceSlider.value);
+
+            if (currentImage instanceof File) {
+                formData.append('file', currentImage);
+            } else {
+                formData.append('image_data', currentImage);
+            }
+
+            formData.append('confidence', confidence);
+
+            // Show loading
+            loading.classList.add('show');
+            results.classList.remove('show');
+            errorMsg.classList.remove('show');
+
+            try {
+                const response = await fetch('/detect', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                // Display results
+                displayResults(data);
+
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                loading.classList.remove('show');
+            }
+        });
+
+        function displayResults(data) {
+            document.getElementById('playerCount').textContent = data.total_players;
+            document.getElementById('resultImage').src = `data:image/jpeg;base64,${data.image}`;
+
+            // Display detections list
+            const detectionsList = document.getElementById('detectionsList');
+            detectionsList.innerHTML = '<h4>Detection Details:</h4>';
+
+            data.detections.forEach((det, index) => {
+                const item = document.createElement('div');
+                item.className = 'detection-item';
+                item.innerHTML = `
+                    <span>Player ${index + 1}</span>
+                    <div class="confidence-bar">
+                        <div class="confidence-fill" style="width: ${det.confidence * 100}%"></div>
+                    </div>
+                    <span>${(det.confidence * 100).toFixed(1)}%</span>
+                `;
+                detectionsList.appendChild(item);
+            });
+
+            results.classList.add('show');
+        }
+
+        function showError(message) {
+            errorMsg.textContent = `Error: ${message}`;
+            errorMsg.classList.add('show');
+        }
+
+        function showMessage(message) {
+            console.log(message);
+        }
+    </script>
+</body>
+</html>
