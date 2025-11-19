@@ -8,7 +8,7 @@ import numpy as np
 from ultralytics import YOLO
 
 app = Flask(__name__)
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max file size
+app.config['MAX_CONTENT_LENGTH'] = 36 * 1024 * 1024  # 16MB max file size
 app.config['UPLOAD_FOLDER'] = 'uploads'
 
 # Create uploads directory if it doesn't exist
@@ -16,7 +16,7 @@ os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
 # Load YOLO model (using YOLOv8 pre-trained on COCO dataset)
 # The model will be downloaded automatically on first run
-model = YOLO('yolov8n.pt')  # Using nano model for faster inference
+model = YOLO('yolov8x.pt')  # Using nano model for faster inference
 
 def detect_players(image_path, confidence_threshold=0.3):
     """
@@ -149,5 +149,5 @@ def detect():
 
 if __name__ == '__main__':
     print("Starting Football Player Detection App...")
-    print("Open your browser and go to: http://localhost:5000")
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    print("Open your browser and go to: http://localhost:5001")
+    app.run(debug=True, host='0.0.0.0', port=5001)
