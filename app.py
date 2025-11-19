@@ -8,7 +8,7 @@ import numpy as np
 from ultralytics import YOLO
 
 app = Flask(__name__)
-app.config['MAX_CONTENT_LENGTH'] = 36 * 1024 * 1024  # 16MB max file size
+app.config['MAX_CONTENT_LENGTH'] = 36 * 1024 * 1024  # 36MB max file size
 app.config['UPLOAD_FOLDER'] = 'uploads'
 
 # Create uploads directory if it doesn't exist
