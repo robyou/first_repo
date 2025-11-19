@@ -37,8 +37,36 @@
         .subtitle {
             text-align: center;
             color: #666;
-            margin-bottom: 40px;
+            margin-bottom: 20px;
             font-size: 1.1em;
+        }
+
+        .mode-selector {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .mode-btn {
+            background: white;
+            color: #667eea;
+            padding: 12px 30px;
+            border: 2px solid #667eea;
+            border-radius: 50px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .mode-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        .mode-btn.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
         }
 
         .upload-section {
@@ -249,22 +277,113 @@
             background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
             transition: width 0.3s ease;
         }
+
+        .result-video {
+            max-width: 100%;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .download-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1em;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .progress-container {
+            margin: 20px 0;
+            display: none;
+        }
+
+        .progress-container.show {
+            display: block;
+        }
+
+        .progress-bar-bg {
+            width: 100%;
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+            width: 0%;
+            transition: width 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .video-stats {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        .stat-box {
+            background: #f8f9ff;
+            padding: 15px 25px;
+            border-radius: 10px;
+            text-align: center;
+        }
+
+        .stat-box .label {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 5px;
+        }
+
+        .stat-box .value {
+            color: #667eea;
+            font-size: 1.5em;
+            font-weight: bold;
+        }
+
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>⚽ Football Player Detection</h1>
-        <p class="subtitle">Upload or paste a screenshot of a football match to detect players</p>
+        <p class="subtitle">Upload an image or video of a football match to detect players</p>
+
+        <div class="mode-selector">
+            <button class="mode-btn active" data-mode="image">📸 Image Mode</button>
+            <button class="mode-btn" data-mode="video">🎥 Video Mode</button>
+        </div>
 
         <div class="upload-section" id="dropZone">
-            <h3>📸 Upload or Paste Image</h3>
+            <h3 id="uploadTitle">📸 Upload or Paste Image</h3>
             <div class="file-input-wrapper">
                 <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
                     Choose File
                 </button>
                 <input type="file" id="fileInput" accept="image/*">
             </div>
-            <p class="paste-hint">
+            <p class="paste-hint" id="pasteHint">
                 💡 Tip: You can also paste an image directly (Ctrl+V / Cmd+V)
             </p>
         </div>
@@ -282,7 +401,14 @@
 
         <div class="loading" id="loading">
             <div class="spinner"></div>
-            <p>Detecting players...</p>
+            <p id="loadingText">Detecting players...</p>
+        </div>
+
+        <div class="progress-container" id="progressContainer">
+            <h3>Processing Video...</h3>
+            <div class="progress-bar-bg">
+                <div class="progress-bar-fill" id="progressBar">0%</div>
+            </div>
         </div>
 
         <div class="results" id="results">
@@ -291,8 +417,14 @@
                 <div class="count" id="playerCount">0</div>
             </div>
 
-            <div class="image-container">
+            <div class="image-container" id="imageContainer">
                 <img id="resultImage" class="result-image" alt="Detection Result">
+            </div>
+
+            <div class="image-container hidden" id="videoContainer">
+                <video id="resultVideo" class="result-video" controls></video>
+                <div class="video-stats" id="videoStats"></div>
+                <a id="downloadBtn" class="download-btn" download>Download Processed Video</a>
             </div>
 
             <div class="detections-list" id="detectionsList"></div>
@@ -301,6 +433,7 @@
 
     <script>
         let currentImage = null;
+        let currentMode = 'image'; // 'image' or 'video'
 
         const fileInput = document.getElementById('fileInput');
         const detectBtn = document.getElementById('detectBtn');
@@ -310,6 +443,41 @@
         const loading = document.getElementById('loading');
         const results = document.getElementById('results');
         const errorMsg = document.getElementById('errorMsg');
+        const uploadTitle = document.getElementById('uploadTitle');
+        const pasteHint = document.getElementById('pasteHint');
+        const imageContainer = document.getElementById('imageContainer');
+        const videoContainer = document.getElementById('videoContainer');
+        const progressContainer = document.getElementById('progressContainer');
+        const loadingText = document.getElementById('loadingText');
+
+        // Mode switcher
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Update active state
+                document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+
+                // Switch mode
+                currentMode = this.dataset.mode;
+                currentImage = null;
+                detectBtn.disabled = true;
+
+                // Update UI
+                if (currentMode === 'image') {
+                    uploadTitle.textContent = '📸 Upload or Paste Image';
+                    pasteHint.classList.remove('hidden');
+                    fileInput.accept = 'image/*';
+                } else {
+                    uploadTitle.textContent = '🎥 Upload Video';
+                    pasteHint.classList.add('hidden');
+                    fileInput.accept = '.mp4,.avi,.mov,.mkv,.flv,.wmv,.webm,video/*';
+                }
+
+                // Clear results
+                results.classList.remove('show');
+                errorMsg.classList.remove('show');
+            });
+        });
 
         // Update confidence value display
         confidenceSlider.addEventListener('input', (e) => {
@@ -366,6 +534,14 @@
         detectBtn.addEventListener('click', async () => {
             if (!currentImage) return;
 
+            if (currentMode === 'image') {
+                await detectImage();
+            } else {
+                await detectVideo();
+            }
+        });
+
+        async function detectImage() {
             const formData = new FormData();
             const confidence = parseFloat(confidenceSlider.value);
 
@@ -381,6 +557,7 @@
             loading.classList.add('show');
             results.classList.remove('show');
             errorMsg.classList.remove('show');
+            loadingText.textContent = 'Detecting players in image...';
 
             try {
                 const response = await fetch('/detect', {
@@ -395,18 +572,59 @@
                 }
 
                 // Display results
-                displayResults(data);
+                displayImageResults(data);
 
             } catch (error) {
                 showError(error.message);
             } finally {
                 loading.classList.remove('show');
             }
-        });
+        }
 
-        function displayResults(data) {
+        async function detectVideo() {
+            const formData = new FormData();
+            const confidence = parseFloat(confidenceSlider.value);
+
+            formData.append('file', currentImage);
+            formData.append('confidence', confidence);
+
+            // Show loading
+            loading.classList.add('show');
+            results.classList.remove('show');
+            errorMsg.classList.remove('show');
+            progressContainer.classList.remove('show');
+            loadingText.textContent = 'Processing video... This may take a few minutes.';
+
+            try {
+                const response = await fetch('/detect_video', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.error) {
+                    throw new Error(data.error);
+                }
+
+                // Display results
+                displayVideoResults(data);
+
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                loading.classList.remove('show');
+                progressContainer.classList.remove('show');
+            }
+        }
+
+        function displayImageResults(data) {
             document.getElementById('playerCount').textContent = data.total_players;
             document.getElementById('resultImage').src = `data:image/jpeg;base64,${data.image}`;
+
+            // Show image container, hide video container
+            imageContainer.classList.remove('hidden');
+            videoContainer.classList.add('hidden');
 
             // Display detections list
             const detectionsList = document.getElementById('detectionsList');
@@ -424,6 +642,45 @@
                 `;
                 detectionsList.appendChild(item);
             });
+
+            results.classList.add('show');
+        }
+
+        function displayVideoResults(data) {
+            document.getElementById('playerCount').textContent = data.total_detections;
+
+            // Set video source
+            const videoElement = document.getElementById('resultVideo');
+            videoElement.src = data.video_url;
+
+            // Show video container, hide image container
+            videoContainer.classList.remove('hidden');
+            imageContainer.classList.add('hidden');
+
+            // Display video stats
+            const videoStats = document.getElementById('videoStats');
+            videoStats.innerHTML = `
+                <div class="stat-box">
+                    <div class="label">Total Detections</div>
+                    <div class="value">${data.total_detections}</div>
+                </div>
+                <div class="stat-box">
+                    <div class="label">Total Frames</div>
+                    <div class="value">${data.total_frames}</div>
+                </div>
+                <div class="stat-box">
+                    <div class="label">Avg Detections/Frame</div>
+                    <div class="value">${(data.total_detections / data.total_frames).toFixed(1)}</div>
+                </div>
+            `;
+
+            // Set download link
+            const downloadBtn = document.getElementById('downloadBtn');
+            downloadBtn.href = data.video_url;
+            downloadBtn.download = data.filename;
+
+            // Hide detections list for video
+            document.getElementById('detectionsList').innerHTML = '';
 
             results.classList.add('show');
         }

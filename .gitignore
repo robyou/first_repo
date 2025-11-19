@@ -32,11 +32,20 @@ wheels/
 instance/
 .webassets-cache
 
-# Uploads
+# Uploads and outputs
 uploads/
+static/outputs/*
+!static/outputs/.gitkeep
 *.jpg
 *.png
 *.jpeg
+*.mp4
+*.avi
+*.mov
+*.mkv
+*.flv
+*.wmv
+*.webm
 
 # YOLO models
 *.pt
